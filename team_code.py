@@ -19,6 +19,7 @@ from sklearn.model_selection import train_test_split, cross_val_score, GridSearc
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_curve, roc_auc_score, classification_report, confusion_matrix,  ConfusionMatrixDisplay, RocCurveDisplay, PrecisionRecallDisplay
 import sys
 
 from helper_code import *
@@ -92,11 +93,20 @@ def train_model(data_folder, model_folder, verbose):
 
     # Save the model.
     save_model(model_folder, model)
+    
+    y_pred = model.predict(X_test)
+    
+    if verbose:        
+        # Make a confusion matrix for our data
+        cm = confusion_matrix(y_test, y_pred)
 
-    test_accuracy = model.score(X_test, y_test)
-
-    if verbose:
-        print(f"Test Accuracy: {test_accuracy:.4f}")
+        # we can use the ConfusionMatrixDisplay to plot the confusion matrix
+        disp = ConfusionMatrixDisplay(cm, display_labels=[f'Class {i}' for i in range(2)])
+        disp.plot(cmap='Blues')
+        plt.title('Confusion Matrix For Wine Data Using Logistic Regression')
+        plt.show()
+        
+        print(classification_report(y_test, y_pred))
 
     if verbose:
         print('Done.')
