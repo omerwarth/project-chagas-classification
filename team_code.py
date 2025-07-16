@@ -1,13 +1,15 @@
-#!/usr/bin/env python
-
-# Edit this script to add your team's code. Some functions are *required*, but you can edit most parts of the required functions,
-# change or remove non-required functions, and add your own functions.
-
 ################################################################################
+# George B. Moody PhysioNet Challenge Solution
+# team_code.py
 #
-# Optional libraries, functions, and variables. You can change or remove them.
+# This file contains the main solution code for the challenge. It includes:
+#   - Data loading and preprocessing
+#   - Feature extraction for both Random Forest and CNN models
+#   - Model training, evaluation, and saving
+#   - Utility functions for grid search and metrics
 #
 ################################################################################
+
 import joblib
 import numpy as np
 from scipy.signal import find_peaks
@@ -18,7 +20,6 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_curve, roc_auc_score, classification_report, confusion_matrix, ConfusionMatrixDisplay, RocCurveDisplay, PrecisionRecallDisplay
 import sys
 import pandas as pd
@@ -34,18 +35,12 @@ import seaborn as sns
 import lightning as L
 from lightning.pytorch import seed_everything
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-
 import torchmetrics as TM
-
 from helper_code import *
-################################################################################
-#
-# Required functions. Edit these functions to add your code, but do not change the arguments for the functions.
-#
-################################################################################
 
-# Train your models. This function is *required*. You should edit this function to add your code, but do *not* change the arguments
-# of this function. If you do not train one of the models, then you can return None for the model.
+################################################################################
+# Required functions. Edit these functions to add your code, but do not change the arguments for the functions.
+################################################################################
 
 # Train your model.
 def train_model(data_folder, model_folder, verbose):
@@ -73,14 +68,9 @@ def train_model(data_folder, model_folder, verbose):
             print(f'- {i+1:>{width}}/{num_records}: {records[i]}...')
 
         record = os.path.join(data_folder, records[i])
-        
-        # CHANGE BACK - 2
         features[i] = extract_features_CNN(record)
         labels[i] = load_label(record)
-        
-        print(labels[i])
-
-    # Train the models.
+        print(f'Label for record {records[i]}: {labels[i]}')
     if verbose:
         print('Training the CNN model on the data...')
         
@@ -92,7 +82,7 @@ def train_model(data_folder, model_folder, verbose):
     trainCNN(dataset)
         
     if verbose:
-        print('Printing the Radnom Forest model results on the data...')
+        print('Printing the Random Forest model results on the data...')
 
     # Split data into train/test split for random forest
     X_train, X_test, y_train, y_test = train_test_split(
@@ -108,13 +98,9 @@ def train_model(data_folder, model_folder, verbose):
 
     # Uncomment to run grid parameter search
     # run_grid_param(features, labels)
-
-    # Define the parameters for the random forest classifier and regressor
-    n_estimators = 10  # Number of trees in the forest.
-    max_leaf_nodes = 34  # Maximum number of leaf nodes in each tree
-    random_state = 56  # Random state; set for reproducibility
-
-    # Fit the model
+    n_estimators = 10
+    max_leaf_nodes = 34
+    random_state = 56
     model = RandomForestClassifier(
         n_estimators=n_estimators, max_leaf_nodes=max_leaf_nodes, random_state=random_state, class_weight='balanced').fit(X_train_sampled, y_trained_sampled)
 
@@ -141,42 +127,35 @@ def train_model(data_folder, model_folder, verbose):
             y_test_i = np.array(y_test == i).astype(int)
             roc_auc[i] = roc_auc_score(y_test_i, probs[:, i])
             plt.plot(fpr[i], tpr[i], label=f'Class {i} (AUC = {roc_auc[i]:.2f})')
-
-        # Making ROC curves for the data 
-        print('Printing ROC curves for Random Forest model...') 
-        
+        print('Printing ROC curves for Random Forest model...')
         plt.plot([0, 1], [0, 1], color='black', linestyle='--')
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('ROC Curve For Iris Data Using Random Forest Model')
+        plt.title('ROC Curve For ECG Data Using Random Forest Model')
         plt.legend()
         plt.show()
-
-        print('Printing confusion matrix for random forest model...') 
+        print('Printing confusion matrix for random forest model...')
         print(cm_df)
 
-        # we can use the ConfusionMatrixDisplay to plot the confusion matrix
+        # We can use the ConfusionMatrixDisplay to plot the confusion matrix
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
         disp.plot(cmap='Blues')
         plt.title('Confusion Matrix For ECG Data Using Random Forest')
         plt.show()
-
-        print('Printing classificagtion report for Random Forest model...') 
+        print('Printing classification report for Random Forest model...')
         print(classification_report(y_test, y_pred))
 
     if verbose:
         print('Done.')
         print()
 
-# Load your trained models. This function is *required*. You should edit this function to add your code, but do *not* change the
-# arguments of this function. If you do not train one of the models, then you can return None for the model.
+# Load trained models.
 def load_model(model_folder, verbose):
     model_filename = os.path.join(model_folder, 'model.sav')
     model = joblib.load(model_filename)
     return model
 
-# Run your trained model. This function is *required*. You should edit this function to add your code, but do *not* change the
-# arguments of this function.
+# Run trained model.
 def run_model(record, model, verbose):
     # Load the model.
     model = model['model']
@@ -193,7 +172,7 @@ def run_model(record, model, verbose):
 
 ################################################################################
 #
-# Optional functions. You can change or remove these functions and/or add new functions.
+# Helper functions for feature extraction and model training.
 #
 ################################################################################
 
@@ -204,7 +183,7 @@ def filter_params(params):
     return params
 
 def run_grid_param(features, labels):
-    # create a model dictionary
+    # Create a model dictionary
     SEED = 654321
 
     models = {
@@ -213,18 +192,14 @@ def run_grid_param(features, labels):
         'random_forest': RandomForestClassifier(random_state=SEED)
     }
 
-    # create a hyperparameter dictionary for the models
+    # Create a hyperparameter dictionary for the models
     param_grid = {
-        'logistic_regression': {'C': [.5, 1, 5],
-                                'penalty': ['l2']},
-        'decision_tree': {'max_depth': [3, 5, None],
-                          'criterion': ['gini', 'entropy']},
-        'random_forest': {'n_estimators': [10, 50, 100], 
-                        'max_depth': [None, 3, 5],
-                        'criterion': ['gini', 'entropy']}
+        'logistic_regression': {'C': [.5, 1, 5], 'penalty': ['l2']},
+        'decision_tree': {'max_depth': [3, 5, None], 'criterion': ['gini', 'entropy']},
+        'random_forest': {'n_estimators': [10, 50, 100], 'max_depth': [None, 3, 5], 'criterion': ['gini', 'entropy']}
     }
 
-    # declare variables to store the best model and score
+    # Declare variables to store the best model and score
     model_best = None
     score_best = 0.0
 
@@ -272,18 +247,6 @@ def extract_features(record):
     else:
         avg_heart_rate = 0.0
         heart_rate_variance = 0.0
-
-    # TO-DO: Update to compute per-lead features. Check lead order and update and use functions for reordering leads as needed.
-    # num_finite_samples = np.size(np.isfinite(signal))
-    # if num_finite_samples > 0:
-    #     signal_mean = np.nanmean(signal)
-    # else:
-    #     signal_mean = 0.0
-    # if num_finite_samples > 1:
-    #     signal_std = np.nanstd(signal)
-    # else:
-    #     signal_std = 0.0
-
     features = np.concatenate(([age], one_hot_encoding_sex, [avg_heart_rate, heart_rate_variance]))
 
     return np.asarray(features, dtype=np.float32)
@@ -356,9 +319,8 @@ class CNNEncoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        #x = x.view(x.size(0), -1)
         return x
-    
+
 class CNNOutput(nn.Module):
     def __init__(self, input_dim, num_classes):
         super().__init__()
@@ -376,28 +338,28 @@ class ECGClassifier(L.LightningModule):
         self.encoder = encoder
         self.decoder = decoder
 
-       # validation metrics - we will use these to compute the metrics at the end of the validation epoch
+       # Validation metrics - we will use these to compute the metrics at the end of the validation epoch
         self.val_metrics_tracker = TM.wrappers.MetricTracker(TM.MetricCollection([TM.classification.MulticlassAccuracy(num_classes=num_classes)]), maximize=True)
         self.validation_step_outputs = []
         self.validation_step_targets = []
 
-        # test metrics - we will use these to compute the metrics at the end of the test epoch
+        # Test metrics - we will use these to compute the metrics at the end of the test epoch
         self.test_roc = TM.ROC(task="multiclass", num_classes=num_classes) # roc and cm have methods we want to call so store them in a variable
         self.test_cm = TM.ConfusionMatrix(task='multiclass', num_classes=num_classes)
         self.test_metrics_tracker = TM.wrappers.MetricTracker(TM.MetricCollection([TM.classification.MulticlassAccuracy(num_classes=num_classes),
                                                             self.test_roc, self.test_cm]), maximize=True)
 
-        # test outputs and targets - we will store the outputs and targets for the test step
+        # Test outputs and targets - we will store the outputs and targets for the test step
         self.test_step_outputs = []
         self.test_step_targets = []
 
-    # the forward method applies the encoder and output to the input
+    # The forward method applies the encoder and output to the input
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
 
-    # the training step. pass the batch through the model and compute the loss
+    # The training step. pass the batch through the model and compute the loss
     def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self.forward(x)
@@ -406,20 +368,19 @@ class ECGClassifier(L.LightningModule):
         self.log('train_loss', loss)
         return loss
 
-    # the validation step. pass the batch through the model and compute the loss. Store the outputs and targets for the epoch end step and log the loss
+    # The validation step. pass the batch through the model and compute the loss. Store the outputs and targets for the epoch end step and log the loss
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        # x = self.encoder(x)
         logits = self.forward(x)
         loss = nn.functional.cross_entropy(logits, y)
         self.log('val_loss', loss, on_step=True, on_epoch=True)
 
-        # store the outputs and targets for the epoch end step
+        # Store the outputs and targets for the epoch end step
         self.validation_step_outputs.append(logits)
         self.validation_step_targets.append(y)
         return loss
 
-    # the test step. pass the batch through the model and compute the loss. Store the outputs and targets for the epoch end step and log the loss
+    # The test step. pass the batch through the model and compute the loss. Store the outputs and targets for the epoch end step and log the loss
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self.forward(x)
@@ -429,19 +390,19 @@ class ECGClassifier(L.LightningModule):
         self.test_step_targets.append(y)
         return loss
 
-    # at the end of the epoch compute the metrics
+    # At the end of the epoch compute the metrics
     def on_validation_epoch_end(self):
-        # stack all the outputs and targets into a single tensor
+        # Stack all the outputs and targets into a single tensor
         all_preds = torch.vstack(self.validation_step_outputs)
         all_targets = torch.hstack(self.validation_step_targets)
 
-        # compute the metrics
+        # Compute the metrics
         loss = nn.functional.cross_entropy(all_preds, all_targets)
         self.val_metrics_tracker.increment()
         self.val_metrics_tracker.update(all_preds, all_targets)
         self.log('val_loss_epoch_end', loss)
 
-        # clear the validation step outputs
+        # Clear the validation step outputs
         self.validation_step_outputs.clear()
         self.validation_step_targets.clear()
 
@@ -451,7 +412,8 @@ class ECGClassifier(L.LightningModule):
 
         self.test_metrics_tracker.increment()
         self.test_metrics_tracker.update(all_preds, all_targets)
-        # clear the test step outputs
+
+        # Clear the test step outputs
         self.test_step_outputs.clear()
         self.test_step_targets.clear()
 
@@ -508,11 +470,8 @@ def trainCNN(dataset):
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
     
     device = torch.device("cpu")
-    
-    # put the model in evaluation mode so that the parameters are fixed and we don't compute gradients
-    model.eval()   
-
-    # Plotting confusion matrices and ROC curves for model using seaborn
+    model.eval()
+    print('Evaluating CNN model...')
     trainer.test(model=model, dataloaders=test_loader)
     rslt = model.test_metrics_tracker.compute()
 
@@ -545,21 +504,20 @@ def trainCNN(dataset):
 
     device = torch.device("cpu")
     
-    # put the model in evaluation mode so that the parameters are fixed and we don't compute gradients
+    # Put the model in evaluation mode so that the parameters are fixed and we don't compute gradients
     model.eval()
     y_true=[]
     y_pred=[]
     
-    # use torch.no_grad() to disable gradient computation
+    # Use torch.no_grad() to disable gradient computation
     with torch.no_grad():
-        # iterate over the test loader minibatches
+        # Iterate over the test loader minibatches
         for test_data in test_loader:
-            # get the images and labels from the test loader and move them to the cpu. this will make it easier to use them with sklearn
+            # Get the images and labels from the test loader and move them to the cpu. this will make it easier to use them with sklearn
             test_images, test_labels = test_data[0].to(device), test_data[1].to(device)
             pred = model(test_images).argmax(dim=1)
             for i in range(len(pred)):
                 y_true.append(test_labels[i].item())
                 y_pred.append(pred[i].item())
-                
-    print('Printing classificagtion report for CNN model...')            
+    print('Printing classification report for CNN model...')
     print(classification_report(y_true,y_pred,target_names=['chagas-negative', 'chagas-positive'], digits=4))
